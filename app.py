@@ -1,18 +1,31 @@
+# Module import
 from flask import Flask, render_template, request
-import os
 from werkzeug.utils import secure_filename
-import imageio.v3 as iio
 import torch
-import glob
-import shutil
+import cloudinary
+import cloudinary.uploader
+import io
+from PIL import Image
+import uuid
+from dotenv import load_dotenv
+import os
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'static/uploads'
-DISPLAY_FOLDER = 'static/outputs'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Configuration    
+load_dotenv()  # load from .env
+
+cloudinary.config(
+    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.getenv('CLOUDINARY_API_KEY'),
+    api_secret=os.getenv('CLOUDINARY_API_SECRET'),
+    secure=True
+)
+
 
 # Load YOLO model once
 model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+model.conf = 0.45
 
 @app.route('/')
 def index():
@@ -28,33 +41,40 @@ def upload():
         return "No selected file"
 
     if file:
-        filename = secure_filename(file.filename)
-        input_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(input_path)
+        # Not necessary to sanitize file name 
+        # as the file is being directly uploaded to cloudinary and
+        # not being stored in local device
+        # filename = secure_filename(file.filename)
 
-        # Run detection - YOLO saves output to runs/detect/exp by default
-        img = iio.imread(input_path)
-        results = model(img)
-        results.save()
+        # Upload image to the cloudinary
+        upload_img_uuid = f"yolo_upload{uuid.uuid4().hex[:8]}"
+        upload_img = cloudinary.uploader.upload(file, public_id=upload_img_uuid, folder="yolo_uploads")
 
-        # Get path to the most recent YOLO output directory
-        latest_exp = sorted(glob.glob('runs/detect/exp*'), key=os.path.getmtime, reverse=True)[0]
-        # latest_exp = exp_dirs[0]
-        output_img_path = glob.glob(os.path.join(latest_exp, '*.jpg'))[0]
+        # Get the image URL
+        image_url = upload_img['secure_url']
+        results = model(image_url)
+        results.render()
 
-        # Copy the result to static/outputs for web display
-        display_path = os.path.join(DISPLAY_FOLDER, filename)
-        shutil.copy(output_img_path, display_path)
+        # Convert to image and save to memory
+        img_array = results.ims[0]
+        img_pil = Image.fromarray(img_array)
+        buffer = io.BytesIO()
+        img_pil.save(buffer, format="JPEG")
+        buffer.seek(0)
+
+        # Detect objects in the image
+        result_img_uuid = f"yolo_result_{uuid.uuid4().hex[:8]}"
+        # resource_type needs to be set to "image" as the buffer is being uploaded that has no fixed extension unlike the previous case
+        upload_result = cloudinary.uploader.upload(buffer, resource_type="image", public_id=result_img_uuid, folder="yolo_result")
+        result_url = upload_result['secure_url']
 
         # Parse detections
         detections = results.pandas().xyxy[0][['name', 'confidence']].to_dict(orient='records')
 
         return render_template('upload.html',
-                               image_url= input_path,
+                               image_url= image_url,
                                objects=detections,
-                               detected_img='/' + display_path)
+                               detected_img= result_url)
 
 if __name__ == '__main__':
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    os.makedirs(DISPLAY_FOLDER, exist_ok=True)
     app.run(debug=True)
