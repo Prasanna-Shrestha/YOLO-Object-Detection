@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Upload</title>
+</head>
+<body>
+    <h2>Upload an Image</h2>
+    <form method="POST" action="/upload" enctype="multipart/form-data">
+        <input type="file" name="image" accept="image/*" required>
+        <button type="submit">Upload</button>
+    </form>
+
+    {% if image_url %}
+    <h3>Uploaded Image:</h3>
+    <img src="{{ image_url }}" width="300">
+
+        {% if objects %}
+            <h3>Detected Objects:</h3>
+            <ul>
+            {% for obj in objects %}
+                <li>{{ obj.name }} - Confidence: {{ "%.2f"|format(obj.confidence * 100) }}%</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% if detected_img %}
+            <h3>Object Identified</h3>
+            <img src="{{detected_img}}" width="300">
+        {% endif %}
+    {% endif %}
+
+</body>
+</html>
