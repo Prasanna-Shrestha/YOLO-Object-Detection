@@ -20,7 +20,7 @@ cloudinary.config(
 
 
 # Load YOLO model
-model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True, trust_repo=True)
 model.conf = 0.45
 
 @app.route('/')
