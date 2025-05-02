@@ -1,13 +1,12 @@
 # Module import
 from flask import Flask, render_template, request
-from werkzeug.utils import secure_filename
+# from werkzeug.utils import secure_filename
 import torch
 import cloudinary
 import cloudinary.uploader
 import io
 from PIL import Image
 import uuid
-from dotenv import load_dotenv
 import os
 
 app = Flask(__name__, static_url_path='/static')
@@ -20,7 +19,7 @@ cloudinary.config(
 )
 
 
-# Load YOLO model once
+# Load YOLO model
 model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
 model.conf = 0.45
 
@@ -78,5 +77,5 @@ if __name__ == '__main__':
     # app.run(debug=True)
 
     # for production deployment
-    port = int(os.environ.get("PORT", 10000))  # Render sets the PORT env variable
+    port = int(os.environ.get("PORT", 10000))
     app.run(debug=False, host='0.0.0.0', port=port)
