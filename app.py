@@ -74,4 +74,9 @@ def upload():
                                detected_img= result_url)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # for local deployment
+    # app.run(debug=True)
+
+    # for production deployment
+    port = int(os.environ.get("PORT", 10000))  # Render sets the PORT env variable
+    app.run(debug=False, host='0.0.0.0', port=port)
