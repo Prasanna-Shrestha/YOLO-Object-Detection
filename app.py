@@ -20,7 +20,11 @@ cloudinary.config(
 
 
 # Load YOLO model
-model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True, trust_repo=True)
+try:
+    model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True, trust_repo=True)
+except Exception as e:
+    print(f"Error loading YOLO model: {e}")
+    raise e
 model.conf = 0.45
 
 @app.route('/')
