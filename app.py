@@ -8,6 +8,11 @@ import io
 from PIL import Image
 import uuid
 import os
+import sys
+sys.path.insert(0, './yolov5')
+
+from models.common import DetectMultiBackend
+from utils.torch_utils import select_device
 
 app = Flask(__name__, static_url_path='/static')
 
@@ -21,7 +26,12 @@ cloudinary.config(
 
 # Load YOLO model
 try:
-    model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True, trust_repo=True)
+# Setup
+    device = select_device('')
+    model_path = 'yolov5s.pt'
+    # Load model
+    model = DetectMultiBackend(model_path, device=device)
+    # model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True, trust_repo=True)
 except Exception as e:
     print(f"Error loading YOLO model: {e}")
     raise e
